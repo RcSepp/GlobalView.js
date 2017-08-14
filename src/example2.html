@@ -1,0 +1,80 @@
+<html>
+<head>
+	<title>GlobalView</title>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<link rel="stylesheet" type="text/css" href="globalView.css">
+	<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+	<script type="text/javascript" src="lib/gl-matrix.min.js"></script>
+	<script type="text/javascript" src="lib/webgl-utils.js"></script>
+	<script type="text/javascript" src="lib/jquery-csv.min.js"></script>
+	<script type="text/javascript" src="lib/jszip.min.js"></script>
+	<script type="text/javascript" src="lib/parallel.js"></script>
+	<script type="text/javascript" src="pathFinding.js"></script>
+	<script type="text/javascript" src="algorithm.js"></script>
+	<script type="text/javascript" src="utility.js"></script>
+	<script type="text/javascript" src="shaders.js"></script>
+	<script type="text/javascript" src="graphics.js"></script>
+	<script type="text/javascript" src="textRenderContext.js"></script>
+	<script type="text/javascript" src="coordinateSystem.js"></script>
+	<script type="text/javascript" src="colormap.js"></script>
+	<script type="text/javascript" src="histogramViewer.js"></script>
+	<script type="text/javascript" src="densityViewer.js"></script>
+	<script type="text/javascript" src="imageViewer.js"></script>
+	<script type="text/javascript" src="pointViewer.js"></script>
+	<script type="text/javascript" src="globalView.js"></script>
+	<script type="text/javascript" src="dataset.js"></script>
+</head>
+
+<body onload="onLoad()">
+	<p>Example 2: Exploring options<br>
+	The box on the right contains all supported options. Changes to this list are instantly applied to the plot.</p>
+	<div id="divGlobalView" style="position: relative; float: left; border: 1px; width: 800px; height: 600px; padding-right: 24px;"></div>
+	<!--<textarea id="taOptions" style="position: relative; float: left; width: 400px; height: 532px; white-space: pre-wrap; font-family: monospace;" oninput="tOptions_onChange(this)"></textarea>-->
+	<textarea id="taOptions" style="position: fixed; right: 0; top: 8; height: 624; width: 400; white-space: pre-wrap; font-family: monospace; resize: none;" oninput="tOptions_onChange(this)"></textarea>
+	<pre id="preStatus" style="position: fixed; left: 0; top: 632; bottom: 0; width: 100%; /*border: 1px solid white;*/ padding-left: 8;"></div>
+	<script>
+		var plot, taOptions = document.getElementById('taOptions'), preStatus = document.getElementById('preStatus');
+		
+		function onLoad()
+		{
+			plot = new GlobalView(document.getElementById('divGlobalView'), {
+				pointShape: "Cross"
+			});
+			
+			new RandomDataset(1000, 2, function(dataset) {
+				plot.load(dataset, 0, 1, 1, 1);
+			});
+			
+			plot.showData2D();
+			
+			taOptions.value = JSON.stringify(plot.getOptions(), null, 4);
+		}
+		
+		function tOptions_onChange(sender)
+		{
+			var options;
+			
+			try
+			{
+				options = JSON.parse(taOptions.value)
+			}
+			catch (exception)
+			{
+				preStatus.innerText = exception.message;
+				return;
+			}
+			
+			var err;
+			if ((err = plot.validateOptions(options)) === true)
+			{
+				plot.setOptions(options);
+				preStatus.innerText = "";
+			}
+			else
+				preStatus.innerText = err;
+		}
+	</script>
+</body>
+</html>

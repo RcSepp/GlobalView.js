@@ -1,0 +1,68 @@
+<html>
+<head>
+	<title>GlobalView</title>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<link rel="stylesheet" type="text/css" href="globalView.css">
+	<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+	<script type="text/javascript" src="lib/gl-matrix.min.js"></script>
+	<script type="text/javascript" src="lib/webgl-utils.js"></script>
+	<script type="text/javascript" src="lib/jquery-csv.min.js"></script>
+	<script type="text/javascript" src="lib/jszip.min.js"></script>
+	<script type="text/javascript" src="lib/parallel.js"></script>
+	<script type="text/javascript" src="pathFinding.js"></script>
+	<script type="text/javascript" src="algorithm.js"></script>
+	<script type="text/javascript" src="utility.js"></script>
+	<script type="text/javascript" src="shaders.js"></script>
+	<script type="text/javascript" src="graphics.js"></script>
+	<script type="text/javascript" src="textRenderContext.js"></script>
+	<script type="text/javascript" src="coordinateSystem.js"></script>
+	<script type="text/javascript" src="colormap.js"></script>
+	<script type="text/javascript" src="histogramViewer.js"></script>
+	<script type="text/javascript" src="densityViewer.js"></script>
+	<script type="text/javascript" src="imageViewer.js"></script>
+	<script type="text/javascript" src="pointViewer.js"></script>
+	<script type="text/javascript" src="globalView.js"></script>
+	<script type="text/javascript" src="dataset.js"></script>
+</head>
+
+<body onload="onLoad()">
+	<p>Example 4: 1,000,000 points</p>
+	<div id="divGlobalView" style="position: relative; border: 1px; width: 800px; height: 600px;"></div>
+	<pre id="preResults"></pre>
+	<script>
+		function onLoad()
+		{
+			var preResults = document.getElementById('preResults'), measureTime = function(phase, iterations) {
+				var tEnd = performance.now();
+				var time = (tEnd - tStart) / iterations;
+				if (time >= 1e3)
+					preResults.innerText += phase + ": " + (time * 1e-3) + " seconds\n";
+				else if (time >= 1e0)
+					preResults.innerText += phase + ": " + (time * 1e0) + " milliseconds\n";
+				else if (time >= 1e-3)
+					preResults.innerText += phase + ": " + (time * 1e3) + " microseconds\n";
+				else
+					preResults.innerText += phase + ": " + (time * 1e6) + " nanoseconds\n";
+				tStart = performance.now();
+			}, tStart = performance.now();
+			
+			var plot = new GlobalView(document.getElementById('divGlobalView'), {
+				pointSize: 1,
+				pointOpacity: 1,
+				enableTransparency: false,
+				pointShape: "Rectangle"
+			});
+			measureTime("Initialization", 1);
+			
+			new RandomDataset(1e6, 2, function(dataset) { plot.load(dataset, 0, 1, 1, 1); });
+			measureTime("Random dataset generation", 1);
+			
+			for (var frames = 0; performance.now() - tStart < 1000; ++frames)
+				plot.renderOffscreenBuffer();
+			measureTime("Render time", frames);
+		}
+	</script>
+</body>
+</html>

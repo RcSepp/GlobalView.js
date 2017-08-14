@@ -1,0 +1,38 @@
+{
+	"templates": {
+		"referenceTitle": "GlobalView.js",
+		"default": {
+			"outputSourceFiles": false
+		}
+	},
+	"opts": {
+		"destination": "./export/",
+		"encoding": "utf8",
+		"access": "undefined",
+		"verbose": true
+	},
+	"source": {
+		"include": [
+			"../src/utility.js",
+			"../src/formulaCompiler.js",
+			"../src/pathFinding.js",
+			"../src/algorithm.js",
+			"../src/textRenderContext.js",
+			"../src/shaders.js",
+			"../src/graphics.js",
+			"../src/colormap.js",
+			"../src/coordinateSystem.js",
+			"../src/pointViewer.js",
+			"../src/imageViewer.js",
+			"../src/densityViewer.js",
+			"../src/histogramViewer.js",
+			"../src/globalView.js",
+			"../src/dataset.js"
+		],
+		"includePattern": ".+\\.js(doc|x)?$"
+	},
+	"plugins": [
+		"plugins/markdown",
+		"plugins/underscore"
+	]
+}

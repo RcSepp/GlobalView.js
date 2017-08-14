@@ -1,0 +1,127 @@
+<html>
+<head>
+	<title>GlobalView</title>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<link rel="stylesheet" type="text/css" href="globalView.css">
+	<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+	<script type="text/javascript" src="lib/gl-matrix.min.js"></script>
+	<script type="text/javascript" src="lib/webgl-utils.js"></script>
+	<script type="text/javascript" src="lib/jquery-csv.min.js"></script>
+	<script type="text/javascript" src="lib/jszip.min.js"></script>
+	<script type="text/javascript" src="lib/parallel.js"></script>
+	<script type="text/javascript" src="pathFinding.js"></script>
+	<script type="text/javascript" src="algorithm.js"></script>
+	<script type="text/javascript" src="utility.js"></script>
+	<script type="text/javascript" src="formulaCompiler.js"></script>
+	<script type="text/javascript" src="shaders.js"></script>
+	<script type="text/javascript" src="graphics.js"></script>
+	<script type="text/javascript" src="textRenderContext.js"></script>
+	<script type="text/javascript" src="coordinateSystem.js"></script>
+	<script type="text/javascript" src="colormap.js"></script>
+	<script type="text/javascript" src="histogramViewer.js"></script>
+	<script type="text/javascript" src="densityViewer.js"></script>
+	<script type="text/javascript" src="imageViewer.js"></script>
+	<script type="text/javascript" src="pointViewer.js"></script>
+	<script type="text/javascript" src="globalView.js"></script>
+	<script type="text/javascript" src="dataset.js"></script>
+	<script type="text/javascript" src="benchmarkDialog.js"></script>
+	<script type="text/javascript" src="main.js"></script>
+</head>
+
+
+<body onload="onLoad()" onresize="onResize()">
+	<div id="divGlobalView" style="border: 1px; position: absolute; left: 16; top: 16; width: 800; height: 600;">
+		<span class="tooltip"></span>
+	</div>
+	<div id="divControls">
+		<!-- Dataset controls -->
+		<select id="cbDataset" onchange="cbDataset_onChange()">
+			<!--<option>allencell</option>
+			<option>iris</option>
+			<option>10 random points</option>
+			<option>100 random points</option>
+			<option>1000 random points</option>
+			<option>10000 random points</option>
+			<option>100000 random points</option>
+			<option>1000000 random points</option>
+			<option>10000000 random points</option>-->
+		</select>
+		<select id="cbColumnX" onchange="cbColumnX_onChange()"></select>
+		<select id="cbColumnY" onchange="cbColumnY_onChange()"></select>
+		<select id="cbColumnC" onchange="cbColumnC_onChange()"></select>
+		<select id="cbColumnS" onchange="cbColumnS_onChange()"></select>
+		<br>
+		<br>
+		<!-- Option controls -->
+		<select id="cbRenderStyle" class="option" onchange="cbRenderStyle_onChange(this)">
+			<option selected>Event-based rendering</option>
+			<option>Continuous rendering</option>
+		</select>
+		<div>
+			<p>Blending:</p>
+			<select id="cbTransparency" class="option" onchange="cbTransparency_onChange(this)">
+				<option selected>Enabled</option>
+				<option>Disabled</option>
+			</select>
+		</div>
+		<div>
+			<p>Point shape:</p>
+			<select id="cbPointShape" class="option" onchange="cbPointShape_onChange(this)">
+				<option>Rectangle</option>
+				<option selected>Circle</option>
+				<option>Cross</option>
+				<option>Diamond</option>
+				<option>Gaussian</option>
+			</select>
+		</div>
+		<p id="pPointSize">Point size:</p>
+		<input id="rPointSize" class="option" type="range" style="margin-top: -16" min="1" max="100" value="6" step="1" oninput="rPointSize_onChange(this)"/>
+		<p id="pPointOpacity">Point opacity:</p>
+		<input id="rPointOpacity" class="option" type="range" style="margin-top: -16" min="0" max="1" value="1" step="0.1" oninput="rPointOpacity_onChange(this)"/>
+		<br>
+		<br>
+		<input id="cbShowDensity" type="checkbox" onchange="cbShowDensity_onChange(this)"><label for="cbShowDensity">Show density</label><br>
+		<input id="cbShowClusters" type="checkbox" onchange="cbShowClusters_onChange(this)"><label for="cbShowClusters">Show clusters</label><br>
+		<input id="cbShowHistograms" type="checkbox" onchange="cbShowHistograms_onChange(this)"><label for="cbShowHistograms">Show histograms</label>
+		<p id="pVariance">Variance:</p>
+		<input id="rVariance" class="option" type="range" style="margin-top: -16" min="1" max="4" value="1" step="0.0025" oninput="rVariance_onChange(this)"/>
+		<p id="pNumBins"># of histogram bins:</p>
+		<input id="rNumBins" class="option" type="range" style="margin-top: -16" min="1" max="100" value="50" step="0.0025" oninput="rNumBins_onChange(this)"/>
+		<br>
+		<br>
+		<!-- Misc controls -->
+		<button id="cmdRunBenchmark" type="button" onclick="cmdRunBenchmark_onClick(this)">Run Benchmark</button>
+		<br>
+		<br>
+		<p>Thumbnail positioning:</p>
+		<select id="cbThumbnailPositioning" class="option" style="margin-top: -12">
+			<option>none</option>
+			<option>adjacent</option>
+			<option selected>lowDensity</option>
+			<option>project</option>
+		</select>
+		<p id="pNumThumbnails"># of thumbnails:</p>
+		<input id="rNumThumbnails" class="option" type="range" style="margin-top: -16" min="0" max="8" value="4" step="1" oninput="rNumThumbnails_onChange(this)"/>
+		<p id="pDensityRatio">Density ratio:</p>
+		<input id="rDensityRatio" class="option" type="range" style="margin-top: -16" min="0" max="1" value="0.5" step="0.01" oninput="rDensityRatio_onChange(this)"/>
+		<button id="cmdShowData2D" type="button" onclick="cmdShowData2D_onClick(this)">Show thumbnails</button>
+		<br><input id="cbLabelThumbnails" type="checkbox" onchange="cbLabelThumbnails_onChange(this)"><label for="cbLabelThumbnails">Label thumbnails</label>
+		<br>
+		<br>
+		<p id="pDataPoint"></p>
+		<img id="imgDataPoint" style="margin-top: -8; max-width: 100%">
+	</div>
+	
+	<div id="benchmarkDialog" style="display: none" title="Benchmark in progress">
+		<div class="progress-label">Starting benchmark...</div>
+		<div id="pbOverall"></div>
+		<div id="pbPass"></div>
+		<div style="max-height: 400px; overflow-y: auto;">
+			<table id="tblResults" data-role="table" data-mode="columntoggle" class="ui-responsive">
+			</table>
+		</div>
+	</div>
+</body>
+</html>

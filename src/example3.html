@@ -1,0 +1,68 @@
+<html>
+<head>
+	<title>GlobalView</title>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<link rel="stylesheet" type="text/css" href="globalView.css">
+	<!--<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">-->
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script type="text/javascript" src="lib/gl-matrix.min.js"></script>
+	<script type="text/javascript" src="lib/webgl-utils.js"></script>
+	<script type="text/javascript" src="lib/jquery-csv.min.js"></script>
+	<script type="text/javascript" src="lib/jszip.min.js"></script>
+	<script type="text/javascript" src="lib/parallel.js"></script>
+	<script type="text/javascript" src="pathFinding.js"></script>
+	<script type="text/javascript" src="algorithm.js"></script>
+	<script type="text/javascript" src="utility.js"></script>
+	<script type="text/javascript" src="shaders.js"></script>
+	<script type="text/javascript" src="graphics.js"></script>
+	<script type="text/javascript" src="textRenderContext.js"></script>
+	<script type="text/javascript" src="coordinateSystem.js"></script>
+	<script type="text/javascript" src="colormap.js"></script>
+	<script type="text/javascript" src="histogramViewer.js"></script>
+	<script type="text/javascript" src="densityViewer.js"></script>
+	<script type="text/javascript" src="imageViewer.js"></script>
+	<script type="text/javascript" src="pointViewer.js"></script>
+	<script type="text/javascript" src="globalView.js"></script>
+	<script type="text/javascript" src="dataset.js"></script>
+</head>
+
+<body onload="onLoad()">
+	<p>Example 3: The Iris dataset with custom point shapes<br>
+	Source: <a href="http://archive.ics.uci.edu/ml/datasets/Iris">http://archive.ics.uci.edu/ml/datasets/Iris</a></p>
+	<div id="divGlobalView" style="position: relative; border: 1px; width: 800px; height: 600px;"></div>
+	<span id="spanNumLeafs"></span><input id="rangeNumLeafs" type="range" min="1" max="13" value="5" step="1" oninput="rangeNumLeafs_oninput(this)"/>
+	<script>
+		var plot;
+		function onLoad()
+		{
+			plot = new GlobalView(document.getElementById('divGlobalView'), {
+				pointShape: "Custom",
+				pointSize: 15,
+				
+				pointColor: ["#F25", "green", [40, 60, 230, 255]]
+				
+				// Other valid color-values are:
+				//pointColor: [100, 100, 255, 255]
+				//pointColor: [255, 255, 255, 80]
+				//pointColor: "#38F"
+				//pointColor: "#123456"
+				//pointColor: "violet"
+			});
+			
+			new CsvDataset("datasets/iris.data", {
+				columnLabels: ["Sepal Length [cm]", "Sepal Width [cm]", "Petal Length [cm]", "Petal Width [cm]", "Class"]
+			}, function(dataset) {
+				plot.load(dataset, 0, 1, 4, 1);
+			});
+			
+			rangeNumLeafs_oninput(document.getElementById('rangeNumLeafs'));
+		}
+		function rangeNumLeafs_oninput(sender)
+		{
+			var numLeafs = Number.parseInt(sender.value);
+			document.getElementById('spanNumLeafs').innerText = "Number of leafs: " + numLeafs;
+			plot.setOption("customPointShape", "{ float r = length(p), f = sin(0.5 * " + numLeafs + ".0 * atan(p.x, p.y)); return pow(clamp(abs(f) - r, 0.0, 1.0), 0.5); }");
+		}
+	</script>
+</body>
+</html>

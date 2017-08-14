@@ -1,0 +1,17 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "firefox",
+			"request": "launch",
+			"reAttach": true,
+			"name": "Launch index.html",
+			"file": "${workspaceRoot}/index.html"
+		},
+		{
+            "name": "Attach index.html",
+            "type": "firefox",
+            "request": "attach"
+        }
+	]
+}

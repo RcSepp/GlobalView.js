@@ -1,0 +1,55 @@
+<html>
+<head>
+	<title>GlobalView</title>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<link rel="stylesheet" type="text/css" href="globalView.css">
+	<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+	<script type="text/javascript" src="lib/gl-matrix.min.js"></script>
+	<script type="text/javascript" src="lib/webgl-utils.js"></script>
+	<script type="text/javascript" src="lib/jquery-csv.min.js"></script>
+	<script type="text/javascript" src="lib/jszip.min.js"></script>
+	<script type="text/javascript" src="lib/parallel.js"></script>
+	<script type="text/javascript" src="pathFinding.js"></script>
+	<script type="text/javascript" src="algorithm.js"></script>
+	<script type="text/javascript" src="formulaCompiler.js"></script>
+	<script type="text/javascript" src="utility.js"></script>
+	<script type="text/javascript" src="shaders.js"></script>
+	<script type="text/javascript" src="graphics.js"></script>
+	<script type="text/javascript" src="textRenderContext.js"></script>
+	<script type="text/javascript" src="coordinateSystem.js"></script>
+	<script type="text/javascript" src="colormap.js"></script>
+	<script type="text/javascript" src="histogramViewer.js"></script>
+	<script type="text/javascript" src="densityViewer.js"></script>
+	<script type="text/javascript" src="imageViewer.js"></script>
+	<script type="text/javascript" src="pointViewer.js"></script>
+	<script type="text/javascript" src="globalView.js"></script>
+	<script type="text/javascript" src="dataset.js"></script>
+</head>
+
+<body onload="onLoad()">
+	<p>Example 6: Using formula-based data vectors</p>
+	<div id="divGlobalView" style="position: relative; border: 1px; width: 800px; height: 600px;"></div>
+	<script>
+		function EmptyDataset(n)
+		{
+			Dataset.call(this);
+			this.length = n;
+		}
+		
+		function onLoad()
+		{
+			var plot = new GlobalView(document.getElementById('divGlobalView'), {
+				pointSize: 1.5,
+				pointColor: "white"
+			});
+			var dataset = new EmptyDataset(10000);
+dataset.dataVectors.push(new DataVector(dataset, "i"));
+dataset.dataVectors.push(new DataVector(dataset, "sin(i * 8.0 * PI / n)"));
+dataset.dataVectors.push(new DataVector(dataset, "0.0"));
+			plot.load(dataset, 0, 1, 2, 2);
+		}
+	</script>
+</body>
+</html>

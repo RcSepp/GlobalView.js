@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: imageViewer.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: imageViewer.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>//const LABEL_HEIGHT = 12, LABEL_WIDTH = 16.5;
+var LABEL_HEIGHT = 12, LABEL_WIDTH = 16.5;
+const LABEL_TEXT_PADDING = 2;
+
+/**
+ * A viewer that renders labels (thumbnails) to the global view.
+ * @constructor
+ * @package
+ * @implements {Viewer}
+ * @param {Object} gl // {WebGLRenderingContext}
+ * @param {Object} globalView // {GlobalView}
+ */
+function ImageViewer(gl, globalView)
+{
+	var sdrImage = new Shader(gl, Shaders.vsTextured, Shaders.fsTextured);
+	sdrImage.matWorldViewProj = sdrImage.u4x4f("matWorldViewProj");
+	
+	var sdrLine = new Shader(gl, Shaders.vsSimple, Shaders.fsLine);
+	sdrLine.color = sdrLine.u4f("color");
+	sdrLine.color.apply(sdrLine, gl.foreColor);
+	sdrLine.matWorldViewProj = sdrLine.u4x4f("matWorldViewProj");
+	
+	// Create a 2D line mesh
+	var meshLine = new Mesh(gl, new Float32Array([
+		// Positions
+		0, 0, 0,
+		1, 0, 0
+	]), null, null, null, null, null, gl.LINES);
+	
+	// Create a 2D quad mesh
+	var meshQuad = new Mesh(gl, new Float32Array([
+		// Positions
+		0, 1, 0,
+		0, 0, 0,
+		1, 1, 0,
+		1, 0, 0
+	]), null, null, null, new Float32Array([
+		// Texture coordinates
+		0, 1,
+		0, 0,
+		1, 1,
+		1, 0
+	]));
+	
+	// Create a 2D line quad mesh
+	var meshLineQuad = new Mesh(gl, new Float32Array([
+		// Positions
+		0, 0, 0,
+		0, 1, 0,
+		1, 1, 0,
+		1, 0, 0
+	]), null, null, null, null, null, gl.LINE_LOOP);
+	
+	// Create a 2D arrow mesh
+LABEL_HEIGHT = gl.measureTextHeight() + 2 * LABEL_TEXT_PADDING;
+LABEL_WIDTH = gl.measureTextWidth('888') + 2 * LABEL_TEXT_PADDING;
+	var meshLabel = new Mesh(gl, new Float32Array([
+		// Positions
+		0.0,  0.0, 0,
+		0.5 * LABEL_HEIGHT,  0.5 * LABEL_HEIGHT, 0,
+		0.5 * LABEL_HEIGHT + LABEL_WIDTH,  0.5 * LABEL_HEIGHT, 0,
+		0.5 * LABEL_HEIGHT + LABEL_WIDTH, -0.5 * LABEL_HEIGHT, 0,
+		0.5 * LABEL_HEIGHT, -0.5 * LABEL_HEIGHT, 0
+	]), null, null, null, null, null, gl.TRIANGLE_FAN);
+	
+	// Create a 2D line arrow mesh
+	var meshLineLabel = new Mesh(gl, new Float32Array([
+		// Positions
+		0.0,  0.0, 0,
+		0.5 * LABEL_HEIGHT,  0.5 * LABEL_HEIGHT, 0,
+		0.5 * LABEL_HEIGHT + LABEL_WIDTH,  0.5 * LABEL_HEIGHT, 0,
+		0.5 * LABEL_HEIGHT + LABEL_WIDTH, -0.5 * LABEL_HEIGHT, 0,
+		0.5 * LABEL_HEIGHT, -0.5 * LABEL_HEIGHT, 0
+	]), null, null, null, null, null, gl.LINE_LOOP);
+	
+	var images = [];
+	
+	var PixelAlignX = x => (Math.floor(x * gl.width / 2.0) + 0.5) * 2.0 / gl.width;
+	var PixelAlignY = y => (Math.floor(y * gl.height / 2.0) + 0.5) * 2.0 / gl.height;
+	
+	this.render = function(flipY, tf)
+	{
+		if (images.length === 0)
+			return;
+		var mattrans = mat4.create();
+		var imagePos = vec2.create(), refPos = vec2.create(), imageSize = vec2.create();
+		
+		//gl.disable(gl.SCISSOR_TEST);
+		
+		if (options['labelThumbnails'])
+		{
+			// Draw labels at image.refPos
+			var label = 1;
+			images.forEach(function(image) {
+				if (image.imagePos === image.refPos)
+					return;
+				tf.transformPos(refPos, image.refPos);
+				
+				sdrLine.bind();
+				mat4.identity(mattrans);
+				if (flipY === true)
+					mat4.scale(mattrans, mattrans, [1.0, -1.0, 1.0]);
+				refPos[0] = PixelAlignX(refPos[0]);
+				refPos[1] = PixelAlignY(refPos[1]);
+				mat4.translate(mattrans, mattrans, [refPos[0], refPos[1], 0]);
+				mat4.scale(mattrans, mattrans, [2 / gl.width, 2 / gl.height, 1]);
+				sdrLine.matWorldViewProj(mattrans);
+				
+				sdrLine.color.apply(sdrLine, image.borderColor ? image.borderColor : gl.backColor);
+				meshLabel.bind(sdrLine, null);
+				meshLabel.draw();
+				
+				sdrLine.color.apply(sdrLine, /*image.borderColor ? image.borderColor :*/ gl.foreColor);
+				meshLineLabel.bind(sdrLine, null);
+				meshLineLabel.draw();
+				
+				refPos[0] = (1 + refPos[0]) * gl.width / 2;
+				refPos[1] = (1 - refPos[1]) * gl.height / 2;
+				refPos[0] += 0.5 * LABEL_HEIGHT + LABEL_WIDTH - LABEL_TEXT_PADDING; // Right-align label
+				refPos[1] -= 0.5 * LABEL_HEIGHT - LABEL_TEXT_PADDING; // Right-align label
+				gl.drawText(label++, refPos[0], refPos[1], 'topright');
+			});
+		}
+		else
+		{
+			// Draw lines between image.imagePos and image.refPos
+			sdrLine.bind();
+			meshLine.bind(sdrLine, null);
+			images.forEach(function(image) {
+				if (!image.imagePos || image.imagePos === image.refPos)
+					return;
+				mat4.identity(mattrans);
+				if (flipY === true)
+					mat4.scale(mattrans, mattrans, [1.0, -1.0, 1.0]);
+				tf.transformPos(imagePos, image.imagePos);
+				tf.transformPos(refPos, image.refPos);
+				mat4.translate(mattrans, mattrans, [imagePos[0], imagePos[1], 0.0]);
+				var dx = refPos[0] - imagePos[0], dy = refPos[1] - imagePos[1];
+				mat4.rotateZ(mattrans, mattrans, Math.atan2(dy, dx));
+				mat4.scale(mattrans, mattrans, [Math.sqrt(dx*dx + dy*dy), 1.0, 1.0]);
+				sdrLine.matWorldViewProj(mattrans);
+				sdrLine.color.apply(sdrLine, /*image.borderColor ? image.borderColor :*/ gl.foreColor);
+				meshLine.draw();
+			});
+		}
+		
+		//gl.disable(gl.SCISSOR_TEST);
+		
+		sdrImage.bind();
+		var label = 1;
+		images.forEach(function(image) {
+			if (!image.imagePos)
+				return;
+			
+			//var normalizedImagePos = vec2.create();
+			//tf.transformPos(normalizedImagePos, image.imagePos);
+			//if (normalizedImagePos[0] &lt; 0.0 || normalizedImagePos[0] >= 1.0 || normalizedImagePos[1] &lt; 0.0 || normalizedImagePos[1] >= 1.0)
+			//	return;
+			
+			tf.transformPos(imagePos, image.imagePos);
+			
+			// Set image size
+			tf.transformNml2(imageSize, image.imageSize);
+			var w = image.tex.image.width, h = image.tex.image.height;
+			//imageSize[0] *= 2 / gl.width; imageSize[1] *= 2 / gl.height; // Transform imageSize from normalized space to device space
+			var scale;
+			if (Math.max(imageSize[0], imageSize[0] * h / w, 1.0) &lt; Math.max(imageSize[1] * w / h, imageSize[1]))
+				scale = [2 * Math.floor(imageSize[0]) / gl.width, 2 * Math.floor(imageSize[0] * h / w) / gl.height, 1];
+			else
+				scale = [2 * Math.floor(imageSize[1] * w / h) / gl.width, 2 * Math.floor(imageSize[1]) / gl.height, 1];
+			
+			meshQuad.bind(sdrImage, image.tex);
+			mat4.identity(mattrans);
+			if (flipY === true)
+				mat4.scale(mattrans, mattrans, [1.0, -1.0, 1.0]);
+			imagePos[0] = PixelAlignX(imagePos[0]);
+			mat4.translate(mattrans, mattrans, [imagePos[0], PixelAlignY(imagePos[1]), 0.0]);
+			mat4.scale(mattrans, mattrans, scale);
+			mat4.translate(mattrans, mattrans, image.imageAnchor); // Move anchor to imageAnchor
+			sdrImage.matWorldViewProj(mattrans);
+			meshQuad.draw();
+			
+			meshLineQuad.bind(sdrLine, null);
+			sdrLine.matWorldViewProj(mattrans);
+			sdrLine.color.apply(sdrLine, /*image.borderColor ? image.borderColor :*/ gl.foreColor);
+			meshLineQuad.draw();
+			
+			if (options['labelThumbnails'])
+			{
+				// Draw thumbnail label below thumbnail
+				mat4.identity(mattrans);
+				if (flipY === true)
+					mat4.scale(mattrans, mattrans, [1.0, -1.0, 1.0]);
+				imagePos[0] += image.imageAnchor[0] * scale[0]; // Move stripe position depending on image anchor
+				imagePos[1] += image.imageAnchor[1] * scale[1]; // Move stripe position depending on image anchor
+				
+				mat4.translate(mattrans, mattrans, [imagePos[0], PixelAlignY(imagePos[1]), 0.0]);
+				scale[1] = 2 * LABEL_HEIGHT / gl.height;
+				scale[1] = PixelAlignY(scale[1]);
+				//scale[0] += 2 / gl.width; // Widen by 1 pixel
+				mat4.scale(mattrans, mattrans, scale);
+				mat4.translate(mattrans, mattrans, [-0.0, -1.0, 0.0]); // Move anchor to top of stripe
+				sdrLine.matWorldViewProj(mattrans);
+				
+				sdrLine.color.apply(sdrLine, image.borderColor ? image.borderColor : gl.backColor);
+				meshQuad.bind(sdrLine, null);
+				meshQuad.draw();
+				
+				sdrLine.color.apply(sdrLine, /*image.borderColor ? image.borderColor :*/ gl.foreColor);
+				meshLineQuad.bind(sdrLine, null);
+				meshLineQuad.draw();
+				
+				imagePos[0] += 1.0 * scale[0] - LABEL_TEXT_PADDING * 2 / gl.width; // Right-align label (right-padding = 4)
+				imagePos[1] -= LABEL_TEXT_PADDING * 2 / gl.height; // Right-align label (top-padding = 5)
+				imagePos[1] = PixelAlignY(imagePos[1]);
+				gl.drawText(label++, gl.width * (1 + imagePos[0]) / 2, gl.height * (1 - imagePos[1]) / 2, 'topright');
+			}
+		});
+		
+		//gl.enable(gl.SCISSOR_TEST);
+	}
+	
+	var options = {};
+	this.setDataset = function(dataset, options) {}
+	this.onInputChanged = function(activeInputs, animatedInputs, options) {}
+	this.onOptionsChanged = function(_options) { options = _options; }
+	this.onPlotBoundsChanged = function(plotBounds) {}
+	
+	/**
+	 * @param  {string} imageFilename
+	 * @param  {Array&lt;number>} refPos
+	 * @param  {Array&lt;number>=} imagePos
+	 * @param  {Array&lt;number>=} imageSize
+	 * @param  {string=} imageAnchor (default: 'middlecenter')
+	 */
+	this.showImage = function(imageFilename, refPos, imagePos, imageSize, imageAnchor)
+	{
+		// Convert imageAnchor from string to vec3
+		var imageAnchorVector;
+		switch(imageAnchor)
+		{
+		case 'topleft':			imageAnchorVector = [-0.0, -1.0, 0.0]; break;
+		case 'topcenter':		imageAnchorVector = [-0.5, -1.0, 0.0]; break;
+		case 'topright':		imageAnchorVector = [-1.0, -1.0, 0.0]; break;
+		case 'middleleft':		imageAnchorVector = [-0.0, -0.5, 0.0]; break;
+		default:				imageAnchorVector = [-0.5, -0.5, 0.0]; break;
+		case 'middleright':		imageAnchorVector = [-1.0, -0.5, 0.0]; break;
+		case 'bottomleft':		imageAnchorVector = [-0.0, -0.0, 0.0]; break;
+		case 'bottomcenter':	imageAnchorVector = [-0.5, -0.0, 0.0]; break;
+		case 'bottomright':		imageAnchorVector = [-1.0, -0.0, 0.0]; break;
+		}
+		
+		images.push({
+			tex: LoadTexture(gl, imageFilename, function() { globalView.invalidate(); }),
+			imagePos: imagePos,
+			refPos: refPos,
+			imageSize: imageSize,
+			imageAnchor: imageAnchorVector,
+			borderColor: null
+		});
+	}
+	this.clearImages = function()
+	{
+		images = [];
+	}
+	this.getImages = function()
+	{
+		return images;
+	}
+	
+	this.resolveIntersections = function(tf)
+	{
+		var a = vec2.create(), b = vec2.create(), c = vec2.create(), d = vec2.create();
+		for (var i = 1; i &lt; images.length; ++i)
+			if (images[i].imagePos)
+			{
+				tf.transformPos(a, images[i].imagePos);
+				tf.transformPos(b, images[i].refPos);
+				for (var j = 0; j &lt; i; ++j)
+					if (images[j].imagePos)
+					{
+						tf.transformPos(c, images[j].imagePos);
+						tf.transformPos(d, images[j].refPos);
+						
+						if (vec2.sqrDist(a, b) + vec2.sqrDist(c, d) > vec2.sqrDist(a, d) + vec2.sqrDist(c, b) &amp;&amp; !linesIntersect(a, d, c, b))
+						{
+							//console.log("exchange {0} - {1}".format(i, j));
+							var tmp = images[j].imagePos;
+							images[j].imagePos = images[i].imagePos;
+							images[i].imagePos = tmp;
+							i = j = 0; break; //EDIT: How neccessary is this?
+						}
+					}
+			}
+		for (var i = 1; i &lt; images.length; ++i)
+			if (images[i].imagePos)
+			{
+				tf.transformPos(a, images[i].imagePos);
+				tf.transformPos(b, images[i].refPos);
+				for (var j = 0; j &lt; i; ++j)
+					if (images[j].imagePos)
+					{
+						tf.transformPos(c, images[j].imagePos);
+						tf.transformPos(d, images[j].refPos);
+						
+						if (linesIntersect(a, b, c, d))
+						{
+							//console.log("intersection {0} - {1}".format(i, j));
+							var tmp = images[j].imagePos;
+							images[j].imagePos = images[i].imagePos;
+							images[i].imagePos = tmp;
+							i = j = 0; break; //EDIT: How neccessary is this?
+						}
+					}
+			}
+	}
+	
+	this.imageFromPoint = function(tf, p)
+	{
+		var imagePos = vec2.create(), refPos = vec2.create(), imageSize = vec2.create();
+		
+		var selectedImage = null;
+		images.forEach(function(image) {
+			if (!image.imagePos)
+				return;
+			
+			tf.transformPos(imagePos, image.imagePos);
+			
+			tf.transformNml2(imageSize, image.imageSize);
+			var w = image.tex.image.width, h = image.tex.image.height;
+			var size;
+			if (Math.max(imageSize[0], imageSize[0] * h / w, 1.0) &lt; Math.max(imageSize[1] * w / h, imageSize[1]))
+				size = [Math.floor(imageSize[0]) * 2 / gl.width, Math.floor(imageSize[0] * h / w) * 2 / gl.height, 1];
+			else
+				size = [Math.floor(imageSize[1] * w / h) * 2 / gl.width, Math.floor(imageSize[1]) * 2 / gl.height, 1];
+			var imageBounds = [
+				imagePos[0] + (image.imageAnchor[0]) * size[0],
+				imagePos[0] + (image.imageAnchor[0] + 1.0) * size[0],
+				imagePos[1] + (image.imageAnchor[1]) * size[1],
+				imagePos[1] + (image.imageAnchor[1] + 1.0) * size[1]]
+			
+			if (options['labelThumbnails'])
+				imageBounds[2] -= LABEL_HEIGHT * 2 / gl.height;
+			
+			if (p[0] >= imageBounds[0] &amp;&amp; p[0] &lt;= imageBounds[1] &amp;&amp;
+				p[1] >= imageBounds[2] &amp;&amp; p[1] &lt;= imageBounds[3])
+			{
+				selectedImage = image;
+				return;
+			}
+		});
+		
+		return selectedImage;
+	}
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="ClusterMap.html">ClusterMap</a></li><li><a href="ClusterMapOptions.html">ClusterMapOptions</a></li><li><a href="Colormap.html">Colormap</a></li><li><a href="CoordinateSystem.html">CoordinateSystem</a></li><li><a href="CsvDataset.html">CsvDataset</a></li><li><a href="Dataset.html">Dataset</a></li><li><a href="DataVector.html">DataVector</a></li><li><a href="DensityMap.html">DensityMap</a></li><li><a href="DensityMapOptions.html">DensityMapOptions</a></li><li><a href="DensityViewer.html">DensityViewer</a></li><li><a href="ForwardList.html">ForwardList</a></li><li><a href="GlobalView.html">GlobalView</a></li><li><a href="GlobalView-Transform.html">Transform</a></li><li><a href="HashSet.html">HashSet</a></li><li><a href="HistogramViewer.html">HistogramViewer</a></li><li><a href="ImageViewer.html">ImageViewer</a></li><li><a href="Mesh.html">Mesh</a></li><li><a href="PointViewer.html">PointViewer</a></li><li><a href="PointViewer-DataMesh.html">DataMesh</a></li><li><a href="PointViewer-PointGroup.html">PointGroup</a></li><li><a href="PriorityQueue.html">PriorityQueue</a></li><li><a href="RandomDataset.html">RandomDataset</a></li><li><a href="Shader.html">Shader</a></li><li><a href="TextRenderContext.html">TextRenderContext</a></li></ul><h3>Namespaces</h3><ul><li><a href="Shaders.html">Shaders</a></li></ul><h3>Interfaces</h3><ul><li><a href="Viewer.html">Viewer</a></li></ul><h3>Global</h3><ul><li><a href="global.html#computeClusterMap_method1">computeClusterMap_method1</a></li><li><a href="global.html#computeClusterMap_method2">computeClusterMap_method2</a></li><li><a href="global.html#computeClusterMap_method3">computeClusterMap_method3</a></li><li><a href="global.html#computeDensityMap">computeDensityMap</a></li><li><a href="global.html#computeDensityMapND">computeDensityMapND</a></li><li><a href="global.html#computeHistogram">computeHistogram</a></li><li><a href="global.html#computeHistogram2D">computeHistogram2D</a></li><li><a href="global.html#CSV_DATASET_OPTIONS">CSV_DATASET_OPTIONS</a></li><li><a href="global.html#downloadDensityMap">downloadDensityMap</a></li><li><a href="global.html#downloadStencilMap">downloadStencilMap</a></li><li><a href="global.html#findClosePointOfLowDensity">findClosePointOfLowDensity</a></li><li><a href="global.html#findClosePointOfLowDensity_descend">findClosePointOfLowDensity_descend</a></li><li><a href="global.html#findClosePointOfLowDensityND_descend">findClosePointOfLowDensityND_descend</a></li><li><a href="global.html#findRepresentativePoints">findRepresentativePoints</a></li><li><a href="global.html#findRepresentativePoints2">findRepresentativePoints2</a></li><li><a href="global.html#findRepresentativePointsND">findRepresentativePointsND</a></li><li><a href="global.html#findRepresentativePointsND2">findRepresentativePointsND2</a></li><li><a href="global.html#linesIntersect">linesIntersect</a></li><li><a href="global.html#markPointsInStencilMap">markPointsInStencilMap</a></li><li><a href="global.html#pointInsidePolygon">pointInsidePolygon</a></li><li><a href="global.html#sampleDensityMap">sampleDensityMap</a></li><li><a href="global.html#sampleDensityMapChain">sampleDensityMapChain</a></li><li><a href="global.html#sampleDensityMapColumn">sampleDensityMapColumn</a></li><li><a href="global.html#sampleDensityMapRow">sampleDensityMapRow</a></li><li><a href="global.html#vectorLineIntersection2D">vectorLineIntersection2D</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a> on Mon Aug 14 2017 12:41:16 GMT-0400 (EDT)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

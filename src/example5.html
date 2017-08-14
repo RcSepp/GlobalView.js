@@ -1,0 +1,306 @@
+<html>
+<head>
+	<title>GlobalView</title>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+	<script type="text/javascript" src="lib/gl-matrix.min.js"></script>
+	<script type="text/javascript" src="lib/webgl-utils.js"></script>
+	<script type="text/javascript" src="lib/jquery-csv.min.js"></script>
+	<script type="text/javascript" src="lib/jszip.min.js"></script>
+	<script type="text/javascript" src="lib/parallel.js"></script>
+	<script type="text/javascript" src="pathFinding.js"></script>
+	<script type="text/javascript" src="algorithm.js"></script>
+	<script type="text/javascript" src="utility.js"></script>
+	<script type="text/javascript" src="shaders.js"></script>
+	<script type="text/javascript" src="graphics.js"></script>
+	<script type="text/javascript" src="textRenderContext.js"></script>
+	<script type="text/javascript" src="coordinateSystem.js"></script>
+	<script type="text/javascript" src="colormap.js"></script>
+	<script type="text/javascript" src="histogramViewer.js"></script>
+	<script type="text/javascript" src="densityViewer.js"></script>
+	<script type="text/javascript" src="imageViewer.js"></script>
+	<script type="text/javascript" src="pointViewer.js"></script>
+	<script type="text/javascript" src="globalView.js"></script>
+	<script type="text/javascript" src="dataset.js"></script>
+	
+	<style>
+		.tooltip {
+			visibility: hidden;
+			width: 256px;
+			background-color: #EEF;
+			padding: 16px;
+			border-radius: 6px;
+			border: 1px solid black;
+			position: absolute;
+			transition-timing-function: ease-in;
+			pointer-events: none;
+		}
+		.tooltip:before {
+			content: "";
+			position: absolute;
+			top: -webkit-calc(100% - 10px);
+			top: calc(100% - 10px);
+			left: 20px;
+			height: 20px;
+			width: 20px;
+			background: #EEF;
+			transform: rotate(45deg);
+			border-bottom: inherit;
+			border-right: inherit;
+			box-shadow: inherit;
+		}
+	</style>
+</head>
+
+<body onload="onLoad()" style="display: grid">
+	<p>Example 5: An implementation of the interactive plot of the Allen Institute for Cell Science<br>
+	© 2017 Allen Institute for Cell Science. Interactive Plotting. Available from: 
+	<a href="http://www.allencell.org/interactive-plotting.html">www.allencell.org/interactive-plotting.html</a></p>
+	
+	
+	<div style="margin: 16px auto; width: 90%">
+		<div style="float: left; margin: 0; width: 15%;">
+			<button id="cmdSelectAll" type="button" onclick="cmdSelectAll_onClick(this)">Select All</button>
+			<br>
+			<button id="cmdDeselectAll" type="button" onclick="cmdDeselectAll_onClick(this)" style="margin-top: 8px">Deselect All</button>
+		</div>
+		<div style="float: left; margin: 0; width: 35%;">
+			<input id="Tom20" type="checkbox" checked onchange="cbProtein_onChange(this)"><label for="Tom20">Tom20</label>
+			<input id="Alpha tubulin" type="checkbox" checked onchange="cbProtein_onChange(this)"><label for="Alpha tubulin">Alpha tubulin</label>
+			<input id="Sec61 beta" type="checkbox" checked onchange="cbProtein_onChange(this)"><label for="Sec61 beta">Sec61 beta</label>
+			<br>
+			<input id="Alpha actinin" type="checkbox" checked onchange="cbProtein_onChange(this)"><label for="Alpha actinin">Alpha actinin</label>
+			<input id="Desmoplakin" type="checkbox" checked onchange="cbProtein_onChange(this)"><label for="Desmoplakin">Desmoplakin</label>
+			<input id="Lamin B1" type="checkbox" checked onchange="cbProtein_onChange(this)"><label for="Lamin B1">Lamin B1</label>
+			<br>
+			<input id="Fibrillarin" type="checkbox" checked onchange="cbProtein_onChange(this)"><label for="Fibrillarin">Fibrillarin</label>
+			<input id="Beta actin" type="checkbox" checked onchange="cbProtein_onChange(this)"><label for="Beta actin">Beta actin</label>
+			<input id="ZO1" type="checkbox" checked onchange="cbProtein_onChange(this)"><label for="ZO1">ZO1</label>
+			<br>
+			<input id="Myosin IIB" type="checkbox" checked onchange="cbProtein_onChange(this)"><label for="Myosin IIB">Myosin IIB</label>
+		</div>
+		<div style="float: left; margin: 0; width: 15%; height: 160px">
+			<img id="imgCell" style="max-width: 100%; max-height: 100%"/>
+		</div>
+		<p id="pCellDesc" style="float: left; margin: 0; width: 35%;"></p>
+	</div>
+	
+	<div style="margin: 8px auto; width: 90%; border: 1px solid"></div>
+	
+	<div style="margin: 16px auto; width: 90%">
+		<label for="cbXAxis">X Axis:</label>
+		<select id="cbXAxis" class="option" onchange="cbXAxis_onChange(this)">
+			<option>Apical proximity (unitless)</option>
+			<option>Cellular surface area (µm²)</option>
+			<option selected>Cellular volume (fL)</option>
+			<option>Nuclear surface area (µm²)</option>
+			<option>Nuclear volume (fL)</option>
+			<option>Radial proximity (unitless)</option>
+		</select>
+		
+		<label for="cbYAxis">Y Axis:</label>
+		<select id="cbYAxis" class="option" onchange="cbYAxis_onChange(this)">
+			<option>Apical proximity (unitless)</option>
+			<option selected>Cellular surface area (µm²)</option>
+			<option>Cellular volume (fL)</option>
+			<option>Nuclear surface area (µm²)</option>
+			<option>Nuclear volume (fL)</option>
+			<option>Radial proximity (unitless)</option>
+		</select>
+	</div>
+	
+	<!--<div id="divPlot" style="border: 1px; position: fixed; width: 100%; height: 60vw; left: 0; top: 200; background-color: white"></div>-->
+	<div id="divPlot" style="margin: 0px auto; width: 90vw; height: 60vw; background-color: white">
+		<span class="tooltip"></span>
+	</div>
+	
+	
+	<script>
+		const COLUMN_NAMES = [
+			"Tagged Protein",
+			"Nuclear volume (fL)",
+			"Cellular volume (fL)",
+			"Nuclear surface area (µm²)",
+			"Cellular surface area (µm²)",
+			"Radial proximity (unitless)",
+			"Apical proximity (unitless)"
+		];
+		const COLUMN_HINTS = [
+			"",
+			"<b>Nuclear volume:</b> the volume of a nucleus of a given cell, as measured by segmented voxels and associated edge length, in units of femtoliter (fL).",
+			"<b>Cell volume:</b> the volume of a cell, as measured by segmented voxels and associated edge length, in units of femtoliter (fL).",
+			"<b>Nuclear surface area:</b> the surface area of a nucleus of a given cell as measured by segmented pixels and associated edge length, in units of µm².",
+			"<b>Cell surface area:</b> the surface area of a cell, as measured by segmented pixels and associated edge length, in units of µm².",
+			"<b>Radial proximity:</b> an intensity-derived image feature, defined as the optical intensity of a structure found in the more external shell of a roughly columnar cell (closer to the cell exterior) as compared to the more internal columnar core of the same cell (closer to the cell center), scaled from -1 to 1. A cell in which all of the fluorescence intensity was at the center of the cell would have a radial proximity of -1; whereas a structure that was at cell boundary would have a radial proximity of 1.",
+			"<b>Apical proximity:</b> an intensity-derived image feature, defined as the optical intensity of a structure found in the top (apical) half of a roughly columnar cell as compared to the basal (bottom) half of this cell, scaled from -1 to 1. A cell in which all of the fluorescent intensity was in the top half would have an apical proximity of 1; whereas a structure that was evenly distributed between the apical and basal halves would have an apical proximity of 0."
+		];
+		var plot, pointsByProtein = {}
+		
+		function onLoad()
+		{
+			plot = new GlobalView(document.getElementById('divPlot'), {
+				pointShape: "Circle",
+				pointSize: 8,
+				pointOpacity: 0.3,
+				pointColor: ["#A6CEE3", "#B2DF8A", "#33A02C", "#FB9A99", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A", "#FFFF99", "#4D61BF"],
+				padding: [8, 152, 50, 50]
+			});
+			plot.onMouseDown = plot_onMouseDown;
+			plot.onMouseOverDatapoint = plot_onMouseOverDatapoint;
+			plot.onMouseOverAxisLabel = plot_onMouseOverAxisLabel;
+			plot.onSelectionChanged = plot_onSelectionChanged;
+			plot.onLassoSelection = plot_onLassoSelection;
+			plot.referencePoints = plot.createPointSet("red", 1);
+			plot.highlightedPoints = plot.createPointSet("red", 1);
+			
+			new CsvDataset("datasets/AICS_Cell-feature-analysis_v1.5.csv", {
+				hasHeader: true,
+				nameColumn: 1,
+				columnLabels: COLUMN_NAMES,
+				imageFilenames: data => "datasets/AICS_Cell-feature-analysis_v1.5_images/" + data[1] + ".png"
+			}, function(dataset) {
+				plot.load(dataset, 2, 4, 0, 3);
+				plot.getCharacteristicPoints(8, 1, function(characteristicPoints) {
+					plot.referencePoints.assign(characteristicPoints);
+					plot.showImages(plot.referencePoints, 'lowDensity');
+				});
+				
+				for (var i = 0, nc = dataset.numColumns; i < dataset.length; ++i)
+				{
+					var protein = dataset.data[i * nc + 0];
+					var proteinPoints = pointsByProtein[protein];
+					if (!proteinPoints)
+						pointsByProtein[protein] = proteinPoints = new HashSet();
+					proteinPoints.push(i);
+				}
+				
+				for (var i = 0; i < COLUMN_HINTS.length; ++i)
+					dataset.dataVectors[i].hint = COLUMN_HINTS[i];
+			});
+		}
+		
+		function cmdSelectAll_onClick(sender)
+		{
+			var elements = document.querySelectorAll("input[type='checkbox']");
+			for (var i = 0; i < elements.length; ++i)
+				if (elements[i].checked === false)
+				{
+					elements[i].checked = true;
+					cbProtein_onChange(elements[i]);
+				}
+		}
+		
+		function cmdDeselectAll_onClick(sender)
+		{
+			var elements = document.querySelectorAll("input[type='checkbox']");
+			for (var i = 0; i < elements.length; ++i)
+				if (elements[i].checked === true)
+				{
+					elements[i].checked = false;
+					cbProtein_onChange(elements[i]);
+				}
+		}
+		
+		function cbProtein_onChange(sender)
+		{
+			var protein = sender.id;
+			var proteinPoints = pointsByProtein[protein];
+			if (sender.checked)
+				plot.points.append(proteinPoints);
+			else
+				plot.points.remove(proteinPoints);
+		}
+		
+		function cbXAxis_onChange(sender)
+		{
+			var columnIndex = COLUMN_NAMES.indexOf(sender.options[sender.selectedIndex].innerText);
+			plot.setActiveColumn(0, columnIndex);
+		}
+		
+		function cbYAxis_onChange(sender)
+		{
+			var columnIndex = COLUMN_NAMES.indexOf(sender.options[sender.selectedIndex].innerText);
+			plot.setActiveColumn(1, columnIndex);
+		}
+		
+		function plot_onMouseDown(event)
+		{
+			switch (event.button)
+			{
+				// On left mouse button: Enable point and lasso selection
+				case 0: event.pointSelection = true; event.lassoSelection = true; break;
+				
+				// On middle mouse button: Initiate view dragging
+				case 1: event.viewDragging = true; break;
+				
+				// On right mouse button: Reset zoom
+				case 2: plot.zoomFit2D(); break;
+			}
+		}
+		
+		function plot_onMouseOverDatapoint(dataset, index)
+		{
+			if (index === -1)
+				plot.highlightedPoints.clear();
+			else
+			{
+				plot.highlightedPoints.set(index);
+				document.getElementById('imgCell').src = dataset.imageFilenames[index];
+				
+				var nc = dataset.numColumns;
+				var xAxisColumn = plot.getActiveColumn(0), yAxisColumn = plot.getActiveColumn(1);
+				document.getElementById('pCellDesc').innerText = `Cell Name: {0}
+Tagged Protein: {1}
+{2}: {3}
+{4}: {5}`.format(
+					dataset.names[index],
+					dataset.data[index * nc + 0],
+					COLUMN_NAMES[xAxisColumn],
+					dataset.data[index * nc + xAxisColumn],
+					COLUMN_NAMES[yAxisColumn],
+					dataset.data[index * nc + yAxisColumn]
+				);
+			}
+		}
+		
+		function plot_onMouseOverAxisLabel(dataVector, labelRect)
+		{
+			var tooltip = document.getElementsByClassName('tooltip')[0];
+			if (dataVector)
+			{
+				tooltip.innerHTML = dataVector.hint;
+				
+				var plotRect = document.getElementById('divPlot').getBoundingClientRect();
+				var tooltipRect = tooltip.getBoundingClientRect();
+				tooltip.style.top = plotRect.top + labelRect.t - (tooltipRect.bottom - tooltipRect.top) - 20 + 'px';
+				tooltip.style.left = plotRect.left + (labelRect.l + labelRect.r) / 2 - (tooltipRect.right - tooltipRect.left) * 0.1 + 'px';
+				tooltip.style.visibility = 'visible';
+				tooltip.style.transition = '';
+				tooltip.style.opacity = 1;
+			}
+			else
+			{
+				//tooltip.style.visibility = 'hidden';
+				tooltip.style.transition = 'opacity 1s';
+				tooltip.style.opacity = 0;
+			}
+		}
+		
+		function plot_onSelectionChanged(dataset, selection)
+		{
+			if (selection.length !== 0)
+			{
+				plot.referencePoints.append(selection);
+				plot.showImages(selection, 'lowDensity');
+			}
+		}
+		
+		function plot_onLassoSelection(dataset, selection, mouseRect)
+		{
+			plot.zoomRect(mouseRect);
+		}
+	</script>
+</body>
+</html>

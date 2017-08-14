@@ -1,0 +1,71 @@
+* {
+	font-family: Verdana, Geneva, sans-serif;
+	font-size: 13px;
+	background-color: #1E1E1E;
+	color: #D4D4D4;
+}
+
+#divControls {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	bottom: 8px;
+	width: 200px;
+	
+	display: inline-block;
+}
+
+#divControls * + * {
+	margin-top: 8px;
+}
+
+#divControls div {
+	white-space: nowrap;
+	display: inline-block;
+}
+#divControls div * {
+	display: inline-block;
+	width: 50%;
+	margin: 0px;
+}
+
+#progressbar {
+	margin-top: 20px;
+}
+.progress-label {
+	font-weight: bold;
+	text-shadow: 1px 1px 0 #fff;
+}
+.ui-dialog-titlebar-close {
+	display: none;
+}
+
+.tooltip {
+	visibility: hidden;
+	width: 120px;
+	background-color: black;
+	/*color: #fff;*/
+	text-align: center;
+	padding: 5px 0;
+	border-radius: 6px;
+	
+	position: absolute;
+	z-index: 1;
+	
+	transition-timing-function: ease-in;
+}
+.tooltip::after {
+	content: " ";
+	position: absolute;
+	top: 100%;
+	left: 10%;
+	margin-left: -5px;
+	border-width: 5px;
+	border-style: solid;
+	border-color: black transparent transparent transparent;
+}
+
+.ui-widget, .ui-widget * {
+	background-color: white;
+	color: black;
+}
