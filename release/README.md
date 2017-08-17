@@ -1,5 +1,5 @@
-## Minified code
+# Minified code
 
-# How to build
+## How to build
 
 make
