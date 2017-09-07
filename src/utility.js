@@ -259,7 +259,7 @@ function hsv2rgb(hsv) // Source: https://stackoverflow.com/a/6930407
 }
 
 
-function urlExists(url, onTrue, onFalse)
+function urlExists(url, onTrue, onFalse, isAsync)
 {
 	var request = new XMLHttpRequest();
 	request.onreadystatechange = function() {
@@ -268,7 +268,7 @@ function urlExists(url, onTrue, onFalse)
 		if (this.readyState == 4 && this.status != 404 && onTrue)
 			onTrue();
 	}
-	request.open('HEAD', url, true);
+	request.open('HEAD', url, !(isAsync === false));
 	request.overrideMimeType("text/csv; charset=utf8");
 	request.send();
 	return request.status != 404;
