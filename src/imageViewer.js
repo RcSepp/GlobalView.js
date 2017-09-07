@@ -3,6 +3,97 @@ var LABEL_HEIGHT = 12, LABEL_WIDTH = 16.5;
 const LABEL_TEXT_PADDING = 2;
 
 /**
+ * An image label associated to a single datapoint of the dataset
+ * @constructor
+ * @export
+ * @param {Object} globalView // {GlobalView}
+ */
+function Thumbnail(globalView)
+{
+	/** @type {WebGLTexture} */ this.tex = null;
+	/** @type {Array<number>} */ this.imagePos = null;
+	/** @type {Array<number>} */ this.refPos = null;
+	/** @type {Array<number>} */ this.imageSize = null;
+	/** @type {Array<number>} */ this.imageAnchor = null;
+	
+	/** @type {boolean} */ this.highlighted = false;
+	
+	/** @type {number} */ this.refIndex = -1;
+	this['getPoint'] =
+	/**
+	 * @summary Retrieve index of associated datapoint
+	 * @return {number}
+	 */
+	this.getPoint = function()
+	{
+		return this.refIndex;
+	}
+	
+	this.borderColor = null;
+	this['getBorderColor'] =
+	/**
+	 * @summary Retrieve color of the image border
+	 * @return {Array<number>} Float array [red, green, blue, alpha] or null
+	 */
+	this.getBorderColor = function()
+	{
+		return this.borderColor ? this.borderColor.slice() : null;
+	}
+	this['setBorderColor'] =
+	/**
+	 * @summary Set color of the image border
+	 * @param {Array<number>} color Float array [red, green, blue, alpha] or null
+	 */
+	this.setBorderColor = function(color)
+	{
+		this.borderColor = color;
+		globalView.invalidate();
+	}
+	
+	this.lineColor = null;
+	this['getLineColor'] =
+	/**
+	 * @summary Retrieve color of the image line
+	 * @return {Array<number>} Float array [red, green, blue, alpha] or null
+	 */
+	this.getLineColor = function()
+	{
+		return this.lineColor ? this.lineColor.slice() : null;
+	}
+	this['setLineColor'] =
+	/**
+	 * @summary Set color of the image line
+	 * @param {Array<number>} color Float array [red, green, blue, alpha] or null
+	 */
+	this.setLineColor = function(color)
+	{
+		this.lineColor = color;
+		globalView.invalidate();
+	}
+	
+	this.labelColor = null;
+	this['getLabelColor'] =
+	/**
+	 * @summary Retrieve color of the image label
+	 * @return {Array<number>} Float array [red, green, blue, alpha] or null
+	 */
+	this.getLabelColor = function()
+	{
+		return this.labelColor ? this.labelColor.slice() : null;
+	}
+	this['setLabelColor'] =
+	/**
+	 * @summary Set color of the image label
+	 * @param {Array<number>} color Float array [red, green, blue, alpha] or null
+	 */
+	this.setLabelColor = function(color)
+	{
+		this.labelColor = color;
+		globalView.invalidate();
+	}
+}
+
+/**
  * A viewer that renders labels (thumbnails) to the global view.
  * @constructor
  * @package
@@ -73,7 +164,7 @@ LABEL_WIDTH = gl.measureTextWidth('888') + 2 * LABEL_TEXT_PADDING;
 		0.5 * LABEL_HEIGHT, -0.5 * LABEL_HEIGHT, 0
 	]), null, null, null, null, null, gl.LINE_LOOP);
 	
-	var images = [];
+	/** @type Array<Thumbnail> */ var images = [];
 	
 	var PixelAlignX = x => (Math.floor(x * gl.width / 2.0) + 0.5) * 2.0 / gl.width;
 	var PixelAlignY = y => (Math.floor(y * gl.height / 2.0) + 0.5) * 2.0 / gl.height;
@@ -106,11 +197,11 @@ LABEL_WIDTH = gl.measureTextWidth('888') + 2 * LABEL_TEXT_PADDING;
 				mat4.scale(mattrans, mattrans, [2 / gl.width, 2 / gl.height, 1]);
 				sdrLine.matWorldViewProj(mattrans);
 				
-				sdrLine.color.apply(sdrLine, image.borderColor ? image.borderColor : gl.backColor);
+				sdrLine.color.apply(sdrLine, image.highlighted ? [1, 1, 0, 1] : (image.labelColor ? image.labelColor : defaultImageLabelColor));
 				meshLabel.bind(sdrLine, null);
 				meshLabel.draw();
 				
-				sdrLine.color.apply(sdrLine, /*image.borderColor ? image.borderColor :*/ gl.foreColor);
+				sdrLine.color.apply(sdrLine, image.borderColor ? image.borderColor : defaultImageBorderColor);
 				meshLineLabel.bind(sdrLine, null);
 				meshLineLabel.draw();
 				
@@ -139,7 +230,7 @@ LABEL_WIDTH = gl.measureTextWidth('888') + 2 * LABEL_TEXT_PADDING;
 				mat4.rotateZ(mattrans, mattrans, Math.atan2(dy, dx));
 				mat4.scale(mattrans, mattrans, [Math.sqrt(dx*dx + dy*dy), 1.0, 1.0]);
 				sdrLine.matWorldViewProj(mattrans);
-				sdrLine.color.apply(sdrLine, /*image.borderColor ? image.borderColor :*/ gl.foreColor);
+				sdrLine.color.apply(sdrLine, image.lineColor ? image.lineColor : defaultImageLineColor);
 				meshLine.draw();
 			});
 		}
@@ -182,7 +273,7 @@ LABEL_WIDTH = gl.measureTextWidth('888') + 2 * LABEL_TEXT_PADDING;
 			
 			meshLineQuad.bind(sdrLine, null);
 			sdrLine.matWorldViewProj(mattrans);
-			sdrLine.color.apply(sdrLine, /*image.borderColor ? image.borderColor :*/ gl.foreColor);
+			sdrLine.color.apply(sdrLine, image.borderColor ? image.borderColor : defaultImageBorderColor);
 			meshLineQuad.draw();
 			
 			if (options['labelThumbnails'])
@@ -202,11 +293,11 @@ LABEL_WIDTH = gl.measureTextWidth('888') + 2 * LABEL_TEXT_PADDING;
 				mat4.translate(mattrans, mattrans, [-0.0, -1.0, 0.0]); // Move anchor to top of stripe
 				sdrLine.matWorldViewProj(mattrans);
 				
-				sdrLine.color.apply(sdrLine, image.borderColor ? image.borderColor : gl.backColor);
+				sdrLine.color.apply(sdrLine, image.highlighted ? [1, 1, 0, 1] : (image.labelColor ? image.labelColor : defaultImageLabelColor));
 				meshQuad.bind(sdrLine, null);
 				meshQuad.draw();
 				
-				sdrLine.color.apply(sdrLine, /*image.borderColor ? image.borderColor :*/ gl.foreColor);
+				sdrLine.color.apply(sdrLine, image.borderColor ? image.borderColor : defaultImageBorderColor);
 				meshLineQuad.bind(sdrLine, null);
 				meshLineQuad.draw();
 				
@@ -220,20 +311,27 @@ LABEL_WIDTH = gl.measureTextWidth('888') + 2 * LABEL_TEXT_PADDING;
 		//gl.enable(gl.SCISSOR_TEST);
 	}
 	
-	var options = {};
+	var options = {}, defaultImageBorderColor = gl.foreColor, defaultImageLineColor = gl.foreColor, defaultImageLabelColor = gl.backColor;
 	this.setDataset = function(dataset, options) {}
 	this.onInputChanged = function(activeInputs, animatedInputs, options) {}
-	this.onOptionsChanged = function(_options) { options = _options; }
+	this.onOptionsChanged = function(_options)
+	{
+		options = _options;
+		defaultImageBorderColor = options['thumbnailBorderColor'] ? new Float32Array(parseColor(options['thumbnailBorderColor'])).map(c => c / 255.0) : gl.foreColor;
+		defaultImageLineColor = options['thumbnailLineColor'] ? new Float32Array(parseColor(options['thumbnailLineColor'])).map(c => c / 255.0) : gl.foreColor;
+		defaultImageLabelColor = options['thumbnailLabelColor'] ? new Float32Array(parseColor(options['thumbnailLabelColor'])).map(c => c / 255.0) : gl.backColor;
+	}
 	this.onPlotBoundsChanged = function(plotBounds) {}
 	
 	/**
 	 * @param  {string} imageFilename
+	 * @param  {number} refIndex
 	 * @param  {Array<number>} refPos
 	 * @param  {Array<number>=} imagePos
 	 * @param  {Array<number>=} imageSize
 	 * @param  {string=} imageAnchor (default: 'middlecenter')
 	 */
-	this.showImage = function(imageFilename, refPos, imagePos, imageSize, imageAnchor)
+	this.showImage = function(imageFilename, refIndex, refPos, imagePos, imageSize, imageAnchor)
 	{
 		// Convert imageAnchor from string to vec3
 		var imageAnchorVector;
@@ -250,19 +348,23 @@ LABEL_WIDTH = gl.measureTextWidth('888') + 2 * LABEL_TEXT_PADDING;
 		case 'bottomright':		imageAnchorVector = [-1.0, -0.0, 0.0]; break;
 		}
 		
-		images.push({
-			tex: LoadTexture(gl, imageFilename, function() { globalView.invalidate(); }),
-			imagePos: imagePos,
-			refPos: refPos,
-			imageSize: imageSize,
-			imageAnchor: imageAnchorVector,
-			borderColor: null
-		});
+		var newImage = new Thumbnail(globalView);
+		newImage.tex = LoadTexture(gl, imageFilename, function() { globalView.invalidate(); });
+		newImage.imagePos = imagePos;
+		newImage.refIndex = refIndex;
+		newImage.refPos = refPos;
+		newImage.imageSize = imageSize;
+		newImage.imageAnchor = imageAnchorVector;
+		newImage.borderColor = null;
+		images.push(newImage);
 	}
 	this.clearImages = function()
 	{
 		images = [];
 	}
+	/**
+	 * @return {Array<Thumbnail>}
+	 */
 	this.getImages = function()
 	{
 		return images;

@@ -737,6 +737,36 @@ function GlobalView(div, startupOptions)
 			requireRedraw: true,
 			requireRecompile: false
 		},
+		/** Controls the color of thumbnail borders in the scatterplot. Valid values are an array of bytes in RGBA order, a color name or 'null'.
+			If set to 'null', the CSS foreground color will be used. */
+		'thumbnailBorderColor': {
+			description: "Controls the color of thumbnail borders in the scatterplot. Valid values are an array of bytes in RGBA order, a color name or 'null'. " + 
+				"If set to 'null', the CSS foreground color will be used.",
+			default: null,
+			valid: value => { return value === null || validateColor(value); },
+			requireRedraw: true,
+			requireRecompile: false
+		},
+		/** Controls the color of thumbnail line in the scatterplot. Valid values are an array of bytes in RGBA order, a color name or 'null'.
+		If set to 'null', the CSS foreground color will be used. */
+		'thumbnailLineColor': {
+			description: "Controls the color of thumbnail line in the scatterplot. Valid values are an array of bytes in RGBA order, a color name or 'null'. " + 
+				"If set to 'null', the CSS foreground color will be used.",
+			default: null,
+			valid: value => { return value === null || validateColor(value); },
+			requireRedraw: true,
+			requireRecompile: false
+		},
+		/** Controls the color of thumbnail labels in the scatterplot. Valid values are an array of bytes in RGBA order, a color name or 'null'.
+		If set to 'null', the CSS background color will be used. */
+		'thumbnailLabelColor': {
+			description: "Controls the color of thumbnail labels in the scatterplot. Valid values are an array of bytes in RGBA order, a color name or 'null'. " + 
+				"If set to 'null', the CSS foreground color will be used.",
+			default: null,
+			valid: value => { return value === null || validateColor(value); },
+			requireRedraw: true,
+			requireRecompile: false
+		},
 		/** When enabled, links thumbnails to points using unique labels instead of lines. */
 		'labelThumbnails': {
 			description: "When enabled, links thumbnails to points using unique labels instead of lines.",
@@ -744,7 +774,7 @@ function GlobalView(div, startupOptions)
 			valid: [true, false],
 			requireRedraw: true,
 			requireRecompile: false
-		},
+		}
 	};
 	/** @enum */
 	var options = {};
@@ -1105,6 +1135,8 @@ function GlobalView(div, startupOptions)
 	 */
 	this.getCharacteristicPoints = function(n, densityRatio, ondone)
 	{
+		if (!dataset)
+			return;
 		var d0 = activeInputs[0], d1 = activeInputs[1];
 		dataset.requestDensityMap(d0, d1, undefined, undefined, function(densityMap) {
 			if (d1 < d0)
@@ -1128,11 +1160,12 @@ function GlobalView(div, startupOptions)
 	this['clearThumbnails'] = this.clearThumbnails = function()
 	{
 		// Clear stencil maps
-		dataset.iterateDensityMaps(function(densityMap) {
-			if (densityMap.stencilMap && densityMap.stencilMap.data)
-				for (var i = 0, stencilMap = densityMap.stencilMap.data, len = stencilMap.length; i < len; ++i)
-					stencilMap[i] = 0;
-		});
+		if (dataset)
+			dataset.iterateDensityMaps(function(densityMap) {
+				if (densityMap.stencilMap && densityMap.stencilMap.data)
+					for (var i = 0, stencilMap = densityMap.stencilMap.data, len = stencilMap.length; i < len; ++i)
+						stencilMap[i] = 0;
+			});
 		
 		imageViewer.clearImages();
 		this.invalidate();
@@ -1167,7 +1200,7 @@ function GlobalView(div, startupOptions)
 						imagePos[d0] = p[0];
 						imagePos[d1] = p[1];
 						var imageSize = dataset.dataVectors.map(v => options['thumbnailSize'] * (v.maximum - v.minimum));
-						imageViewer.showImage(dataset.imageFilenames[r], dataPos, imagePos, imageSize);
+						imageViewer.showImage(dataset.imageFilenames[r], r, dataPos, imagePos, imageSize);
 					}
 				});
 			//downloadDensityMap(densityMap);
@@ -1226,7 +1259,7 @@ function GlobalView(div, startupOptions)
 					}
 				}
 				var imageSize = dataset.dataVectors.map(v => options['thumbnailSize'] * (v.maximum - v.minimum));
-				imageViewer.showImage(dataset.imageFilenames[index], dataPos, imagePos, imageSize);
+				imageViewer.showImage(dataset.imageFilenames[index], index, dataPos, imagePos, imageSize);
 			});
 		}
 	}
@@ -1270,7 +1303,7 @@ function GlobalView(div, startupOptions)
 	this.showImage_none = function(index)
 	{
 		var dataPos = dataset.dataVectors.map(v => v.getValue(index));
-		imageViewer.showImage(dataset.imageFilenames[index], dataPos);
+		imageViewer.showImage(dataset.imageFilenames[index], index, dataPos);
 	}
 	this['showImages_none'] =
 	/**
@@ -1281,7 +1314,7 @@ function GlobalView(div, startupOptions)
 	{
 		points.forEach(function(p) {
 			var dataPos = dataset.dataVectors.map(v => v.getValue(p));
-			imageViewer.showImage(dataset.imageFilenames[p], dataPos);
+			imageViewer.showImage(dataset.imageFilenames[p], p, dataPos);
 		});
 	}
 	
@@ -1294,7 +1327,7 @@ function GlobalView(div, startupOptions)
 	{
 		var dataPos = dataset.dataVectors.map(v => v.getValue(index));
 		var imageSize = dataset.dataVectors.map(v => options['thumbnailSize'] * (v.maximum - v.minimum));
-		imageViewer.showImage(dataset.imageFilenames[index], dataPos, dataPos, imageSize, 'bottomleft');
+		imageViewer.showImage(dataset.imageFilenames[index], index, dataPos, dataPos, imageSize, 'bottomleft');
 	}
 	this['showImages_adjacent'] =
 	/**
@@ -1483,7 +1516,7 @@ function GlobalView(div, startupOptions)
 			imagePos[d0] = dest[0];
 			imagePos[d1] = dest[1];
 			
-			imageViewer.showImage(dataset.imageFilenames[p], dataPos, imagePos, imageSize);
+			imageViewer.showImage(dataset.imageFilenames[p], p, dataPos, imagePos, imageSize);
 		});
 		
 		imageViewer.resolveIntersections(tf);
@@ -1537,15 +1570,27 @@ function GlobalView(div, startupOptions)
 	/**
 	 * Images other than the given image will be de-highlighted.
 	 * @summary Highlight the given image with a highlight color
-	 * @param  {number} index Index of the image to show
+	 * @deprecated Set image.labelColor manually
+	 * @param  {Thumbnail|number} image Image or index of image to show
 	 */
-	this.highlightImage = function(index)
+	this.highlightImage = function(image)
 	{
 		var images = imageViewer.getImages();
-		for (var i = 0; i < images.length; ++i)
-			images[i].borderColor = i === index ? [1.0, 1.0, 0.0, 1.0] : null;
+		if (isNumber(image))
+			for (var i = 0; i < images.length; ++i)
+				images[i].highlighted = i === image;
+		else
+			for (var i = 0; i < images.length; ++i)
+				images[i].highlighted = images[i] === image;
 		this.invalidate();
 	}
+	
+	this['getImages'] =
+	/**
+	 * @summary Get an array of all images of the plot
+	 * @return {Array<Thumbnail>}
+	 */
+	this.getImages = imageViewer.getImages;
 	
 	
 	// >>> Mouse handlers
@@ -1654,6 +1699,20 @@ function GlobalView(div, startupOptions)
 	 * @type {onLassoSelectionCallback}
 	 */
 	this['onLassoSelection'] = null;
+	/**
+	 * @callback onThumbnailSelectionChangedCallback
+	 * @param  {Dataset} dataset
+	 * @param  {Array<Thumbnail>} selection Array of all selected images
+	 */
+	/**
+	 * When the selection is cleared, this event is raised with `selection == []`.
+	 * @summary Event handler that gets fired everytime the collection of selected images is altered
+	 * @member
+	 * @alias onThumbnailSelectionChanged
+	 * @memberof GlobalView
+	 * @type {onThumbnailSelectionChangedCallback}
+	 */
+	this['onThumbnailSelectionChanged'] = null;
 	var ctrlPressed = false, shiftPressed = false;
 	const CTRL = navigator.appVersion.indexOf("Mac") == -1 ? 17 : 224;
 	addKeyDownHandler(function(event) {
@@ -1714,13 +1773,15 @@ function GlobalView(div, startupOptions)
 		if (!shiftPressed && !ctrlPressed && imageDragImages.length !== 0 && (selectedImage === null || imageDragImages.indexOf(selectedImage) === -1))
 		{
 			// Deselect images
-			imageDragImages.forEach(image => image.borderColor = null);
+			imageDragImages.forEach(image => image.highlighted = false);
 			imageDragImages = [];
 			this.invalidate();
+			if (this['onThumbnailSelectionChanged'] !== null)
+				this['onThumbnailSelectionChanged'](dataset, []);
 		}
 		if (selectedImage !== null)
 		{
-			selectedImage.borderColor = [1.0, 0.0, 0.0, 1.0];
+			selectedImage.highlighted = true;
 			if (imageDragImages.indexOf(selectedImage) === -1)
 				imageDragImages.push(selectedImage);
 			if (options['enableThumbnailDragging'])
@@ -1728,6 +1789,8 @@ function GlobalView(div, startupOptions)
 			this.invalidate();
 			if (event['pointSelection'] && this['onSelectionChanged'] !== null)
 				this['onSelectionChanged'](dataset, []);
+			if (this['onThumbnailSelectionChanged'] !== null)
+				this['onThumbnailSelectionChanged'](dataset, imageDragImages);
 			return; // Prevent other mouse-down events
 		}
 		
@@ -1862,7 +1925,7 @@ function GlobalView(div, startupOptions)
 		
 		if (mouseOverImage != null && imageDragImages.indexOf(mouseOverImage) === -1)
 		{
-			mouseOverImage.borderColor = null;
+			mouseOverImage.highlighted = false;
 			this.invalidate();
 			mouseOverImage = null;
 		}
@@ -1871,7 +1934,7 @@ function GlobalView(div, startupOptions)
 		{
 			if (imageDragImages.indexOf(mouseOverImage) === -1)
 			{
-				mouseOverImage.borderColor = [1.0, 1.0, 0.0, 1.0];
+				mouseOverImage.highlighted = true;
 				this.invalidate();
 			}
 			if (mouseOverDatapoint !== -1)
@@ -2029,7 +2092,7 @@ function GlobalView(div, startupOptions)
 	canvas.onmouseleave = function(event) {
 		if (mouseOverImage != null && imageDragImages.indexOf(mouseOverImage) === -1)
 		{
-			mouseOverImage.borderColor = null;
+			mouseOverImage.highlighted = false;
 			this.invalidate();
 			mouseOverImage = null;
 		}
