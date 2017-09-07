@@ -27,25 +27,6 @@ function onLoad()
 		{name: "allencell x100", url: "datasets/AICS_Cell-feature-analysis_v1.5_x100.csv", create: () => new CsvDataset("datasets/AICS_Cell-feature-analysis_v1.5_x100.csv", {hasHeader: true, nameColumn: 1, imageFilenames: function(data) { return "datasets/AICS_Cell-feature-analysis_v1.5_images/" + data[1] + ".png"; }}, dataset_onLoad)},
 	];
 	
-	DATASETS.forEach(function(dataset) {
-		if (isUndefined(dataset.url))
-		{
-			var option = document.createElement("option");
-			option.text = dataset.name;
-			option.createDataset = dataset.create;
-			cbDataset.add(option);
-		}
-		else
-		{
-			urlExists(dataset.url, function() {
-				var option = document.createElement("option");
-				option.text = dataset.name;
-				option.createDataset = dataset.create;
-				cbDataset.add(option);
-			});
-		}
-	});
-	
 	var divGlobalView = document.getElementById('divGlobalView');
 	globalView = new GlobalView(divGlobalView, {
 		//showXAxisHistogram: true,
@@ -94,14 +75,44 @@ function onLoad()
 	rNumThumbnails_onChange(document.getElementById("rNumThumbnails"));
 	rDensityRatio_onChange(document.getElementById("rDensityRatio"));
 	
-	// Load dataset
-	var datasetIndex = readIntCookie('datasetIndex');
-	if (datasetIndex !== null)
-		cbDataset.selectedIndex = datasetIndex;
-	cbDataset_onChange(); // Load even if cookie isn't set
-	
 	document.onkeydown = handleKeyDown;
 	document.onkeyup = handleKeyUp;
+	
+	// Fill cbDataset
+	DATASETS.forEach(function(dataset) {
+		if (isUndefined(dataset.url))
+		{
+			var option = document.createElement("option");
+			option.text = dataset.name;
+			option.createDataset = dataset.create;
+			cbDataset.add(option);
+			if (cbDataset.options.length === DATASETS.length)
+			{
+				// Load dataset
+				var datasetIndex = readIntCookie('datasetIndex');
+				if (datasetIndex !== null)
+					cbDataset.selectedIndex = datasetIndex;
+				cbDataset_onChange(); // Load even if cookie isn't set
+			}
+		}
+		else
+		{
+			urlExists(dataset.url, function() {
+				var option = document.createElement("option");
+				option.text = dataset.name;
+				option.createDataset = dataset.create;
+				cbDataset.add(option);
+				if (cbDataset.options.length === DATASETS.length)
+				{
+					// Load dataset
+					var datasetIndex = readIntCookie('datasetIndex');
+					if (datasetIndex !== null)
+						cbDataset.selectedIndex = datasetIndex;
+					cbDataset_onChange(); // Load even if cookie isn't set
+				}
+			});
+		}
+	});
 }
 
 function onResize()
