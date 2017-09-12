@@ -13,7 +13,7 @@ function DensityViewer(gl, globalView)
 	sdrDensityMap.matTexCoordTransform = sdrDensityMap.u2x2f("matTexCoordTransform");
 	sdrDensityMap.scale = sdrDensityMap.u1f("scale");
 	sdrDensityMap.color = sdrDensityMap.u3f("color");
-	var colormap = LoadTexture(gl, "cmDensityMap.png", function() { globalView.invalidate(); });
+	//var colormap = LoadTexture(gl, "cmDensityMap.png", function() { globalView.invalidate(); });
 	
 	var sdrClusterMap = new Shader(gl, Shaders.vsTextured2, Shaders.fsTextured);
 	sdrClusterMap.matWorldViewProj = sdrClusterMap.u4x4f("matWorldViewProj");
