@@ -737,6 +737,14 @@ function GlobalView(div, startupOptions)
 			requireRedraw: true,
 			requireRecompile: false
 		},
+		/** Controls the width of thumbnail borders in the scatterplot. */
+		'thumbnailBorderWidth': {
+			description: "Controls the width of thumbnail borders in the scatterplot.",
+			default: 1,
+			valid: value => { return value >= 0; },
+			requireRedraw: true,
+			requireRecompile: false
+		},
 		/** Controls the color of thumbnail borders in the scatterplot. Valid values are an array of bytes in RGBA order, a color name or 'null'.
 			If set to 'null', the CSS foreground color will be used. */
 		'thumbnailBorderColor': {

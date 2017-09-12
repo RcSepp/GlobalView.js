@@ -29,7 +29,28 @@ function Thumbnail(globalView)
 		return this.refIndex;
 	}
 	
-	this.borderColor = null;
+	/** @type {number} */ this.borderWidth = null;
+	this['getBorderWidth'] =
+	/**
+	 * @summary Retrieve width of the image border
+	 * @return {number}
+	 */
+	this.getBorderWidth = function()
+	{
+		return this.borderWidth ? this.borderWidth.slice() : null;
+	}
+	this['setBorderWidth'] =
+	/**
+	 * @summary Set width of the image border
+	 * @param {number} width
+	 */
+	this.setBorderWidth = function(width)
+	{
+		this.borderWidth = width;
+		globalView.invalidate();
+	}
+	
+	/** @type {Array<number>} */ this.borderColor = null;
 	this['getBorderColor'] =
 	/**
 	 * @summary Retrieve color of the image border
@@ -50,7 +71,7 @@ function Thumbnail(globalView)
 		globalView.invalidate();
 	}
 	
-	this.lineColor = null;
+	/** @type {Array<number>} */ this.lineColor = null;
 	this['getLineColor'] =
 	/**
 	 * @summary Retrieve color of the image line
@@ -71,7 +92,7 @@ function Thumbnail(globalView)
 		globalView.invalidate();
 	}
 	
-	this.labelColor = null;
+	/** @type {Array<number>} */ this.labelColor = null;
 	this['getLabelColor'] =
 	/**
 	 * @summary Retrieve color of the image label
@@ -260,6 +281,28 @@ LABEL_WIDTH = gl.measureTextWidth('888') + 2 * LABEL_TEXT_PADDING;
 			else
 				scale = [2 * Math.floor(imageSize[1] * w / h) / gl.width, 2 * Math.floor(imageSize[1]) / gl.height, 1];
 			
+			var borderWidth = image.borderWidth ? image.borderWidth : defaultImageBorderWidth;
+			if (borderWidth > 0)
+			{
+				scale[0] += 2 * borderWidth / gl.width;
+				scale[1] += 2 * borderWidth / gl.height;
+				
+				meshQuad.bind(sdrLine);
+				mat4.identity(mattrans);
+				if (flipY === true)
+					mat4.scale(mattrans, mattrans, [1.0, -1.0, 1.0]);
+				imagePos[0] = PixelAlignX(imagePos[0]);
+				mat4.translate(mattrans, mattrans, [imagePos[0], PixelAlignY(imagePos[1]), 0.0]);
+				mat4.scale(mattrans, mattrans, scale);
+				mat4.translate(mattrans, mattrans, image.imageAnchor); // Move anchor to imageAnchor
+				sdrLine.matWorldViewProj(mattrans);
+				sdrLine.color.apply(sdrLine, image.borderColor ? image.borderColor : defaultImageBorderColor);
+				meshQuad.draw();
+				
+				scale[0] -= 2 * borderWidth / gl.width;
+				scale[1] -= 2 * borderWidth / gl.height;
+			}
+			
 			meshQuad.bind(sdrImage, image.tex);
 			mat4.identity(mattrans);
 			if (flipY === true)
@@ -270,11 +313,6 @@ LABEL_WIDTH = gl.measureTextWidth('888') + 2 * LABEL_TEXT_PADDING;
 			mat4.translate(mattrans, mattrans, image.imageAnchor); // Move anchor to imageAnchor
 			sdrImage.matWorldViewProj(mattrans);
 			meshQuad.draw();
-			
-			meshLineQuad.bind(sdrLine, null);
-			sdrLine.matWorldViewProj(mattrans);
-			sdrLine.color.apply(sdrLine, image.borderColor ? image.borderColor : defaultImageBorderColor);
-			meshLineQuad.draw();
 			
 			if (options['labelThumbnails'])
 			{
@@ -311,12 +349,13 @@ LABEL_WIDTH = gl.measureTextWidth('888') + 2 * LABEL_TEXT_PADDING;
 		//gl.enable(gl.SCISSOR_TEST);
 	}
 	
-	var options = {}, defaultImageBorderColor = gl.foreColor, defaultImageLineColor = gl.foreColor, defaultImageLabelColor = gl.backColor;
+	var options = {}, defaultImageBorderWidth = 1, defaultImageBorderColor = gl.foreColor, defaultImageLineColor = gl.foreColor, defaultImageLabelColor = gl.backColor;
 	this.setDataset = function(dataset, options) {}
 	this.onInputChanged = function(activeInputs, animatedInputs, options) {}
 	this.onOptionsChanged = function(_options)
 	{
 		options = _options;
+		defaultImageBorderWidth = options['thumbnailBorderWidth'];
 		defaultImageBorderColor = options['thumbnailBorderColor'] ? new Float32Array(parseColor(options['thumbnailBorderColor'])).map(c => c / 255.0) : gl.foreColor;
 		defaultImageLineColor = options['thumbnailLineColor'] ? new Float32Array(parseColor(options['thumbnailLineColor'])).map(c => c / 255.0) : gl.foreColor;
 		defaultImageLabelColor = options['thumbnailLabelColor'] ? new Float32Array(parseColor(options['thumbnailLabelColor'])).map(c => c / 255.0) : gl.backColor;
